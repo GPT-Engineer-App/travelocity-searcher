@@ -1,0 +1,35 @@
+const fs = require("fs");
+const puppeteer = require("puppeteer");
+
+(async () => {
+  // Read search terms from sites.txt
+  const searchTerms = fs.readFileSync("sites.txt", "utf-8").split(",");
+
+  // Launch Puppeteer
+  const browser = await puppeteer.launch({ headless: true });
+  const page = await browser.newPage();
+
+  // Open Travelocity
+  await page.goto("https://www.travelocity.com");
+
+  // Iterate over search terms
+  for (const term of searchTerms) {
+    // Search for the term
+    await page.type('input[name="q"]', term.trim());
+    await page.keyboard.press("Enter");
+    await page.waitForNavigation();
+
+    // Get the first search result URL
+    const firstResultSelector = "a.result-title"; // Update this selector based on the actual site structure
+    await page.waitForSelector(firstResultSelector);
+    const firstResultUrl = await page.$eval(firstResultSelector, (el) => el.href);
+
+    // Log the URL
+    fs.appendFileSync("log.txt", `${firstResultUrl}\n`);
+
+    // Clear the search input for the next term
+    await page.evaluate(() => (document.querySelector('input[name="q"]').value = ""));
+  }
+
+  await browser.close();
+})();
